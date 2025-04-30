@@ -1,0 +1,177 @@
+import javax.swing.*;
+import java.awt.event.*;
+import java.util.*;
+
+public class Ventana {
+    private JPanel Principal;
+    private JComboBox Pelicula;
+    private JLabel elijaSuPeliculaLabel;
+    private JLabel ingreseSuCedulaLabel;
+    private JTextField CedulaTXT;
+    private JLabel ingreseLaCantidadDeLabel;
+    private JTextField Numentradastxt;
+    private JTextArea ResultadoTXT;
+    private JButton comprarButton;
+    private JButton editarButton;
+    private JTextField NuevaPeliculaTXT;
+    private JTextField NuevaCantidadTXT;
+
+    private ArrayList<Compra> compras = new ArrayList<>();
+    private HashMap<String, Integer> asientosDisponibles = new HashMap<>();
+
+    public Ventana() {
+
+        asientosDisponibles.put("XMEN", 20);
+        asientosDisponibles.put("MARIO", 20);
+        asientosDisponibles.put("BATMAN", 20);
+
+        Pelicula.addItem("XMEN");
+        Pelicula.addItem("MARIO");
+        Pelicula.addItem("BATMAN");
+
+        comprarButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String cedula = CedulaTXT.getText().trim();
+                String pelicula = Pelicula.getSelectedItem().toString();
+                int cantidad;
+
+                try {
+                    cantidad = Integer.parseInt(Numentradastxt.getText().trim());
+                } catch (NumberFormatException ex) {
+                    mostrar("Cantidad inválida.");
+                    return;
+                }
+
+                if (cedula.isEmpty() || cantidad < 1 || cantidad > 3) {
+                    mostrar("Ingrese una cédula válida y cantidad entre 1 y 3.");
+                    return;
+                }
+
+                if (existeCedula(cedula)) {
+                    mostrar("Esta cédula ya ha realizado una compra.");
+                    return;
+                }
+
+                if (asientosDisponibles.get(pelicula) < cantidad) {
+                    mostrar("No hay suficientes asientos disponibles para " + pelicula);
+                    return;
+                }
+
+
+                compras.add(new Compra(cedula, pelicula, cantidad));
+                asientosDisponibles.put(pelicula, asientosDisponibles.get(pelicula) - cantidad);
+                mostrarCompras();
+            }
+        });
+        editarButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+
+            }
+        });
+
+        editarButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                editarButton.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        String cedula = CedulaTXT.getText().trim();
+                        String nuevaPelicula = NuevaPeliculaTXT.getText().trim().toUpperCase();
+                        String nuevaCantidadStr = NuevaCantidadTXT.getText().trim();
+                        int nuevaCantidad;
+
+                        if (cedula.isEmpty() || nuevaPelicula.isEmpty() || nuevaCantidadStr.isEmpty()) {
+                            mostrar("Complete todos los campos para editar.");
+                            return;
+                        }
+
+                        try {
+                            nuevaCantidad = Integer.parseInt(nuevaCantidadStr);
+                        } catch (NumberFormatException ex) {
+                            mostrar("Cantidad inválida.");
+                            return;
+                        }
+
+                        if (nuevaCantidad < 1 || nuevaCantidad > 3) {
+                            mostrar("La cantidad debe estar entre 1 y 3.");
+                            return;
+                        }
+
+                        Compra compraExistente = null;
+                        for (Compra c : compras) {
+                            if (c.getCedula().equals(cedula)) {
+                                compraExistente = c;
+                                break;
+                            }
+                        }
+
+                        if (compraExistente == null) {
+                            mostrar("No se encontró una compra con esa cédula.");
+                            return;
+                        }
+
+                        String peliculaAnterior = compraExistente.getPelicula();
+                        int cantidadAnterior = compraExistente.getCantidad();
+
+
+                        asientosDisponibles.put(peliculaAnterior, asientosDisponibles.get(peliculaAnterior) + cantidadAnterior);
+
+
+                        if (!asientosDisponibles.containsKey(nuevaPelicula)) {
+                            mostrar("Película no válida.");
+                            return;
+                        }
+
+                        if (asientosDisponibles.get(nuevaPelicula) < nuevaCantidad) {
+                            // Restaurar asientos anteriores en caso de fallo
+                            asientosDisponibles.put(peliculaAnterior, asientosDisponibles.get(peliculaAnterior) - cantidadAnterior);
+                            mostrar("No hay suficientes asientos disponibles para " + nuevaPelicula);
+                            return;
+                        }
+
+                        compraExistente.setPelicula(nuevaPelicula);
+                        compraExistente.setCantidad(nuevaCantidad);
+                        asientosDisponibles.put(nuevaPelicula, asientosDisponibles.get(nuevaPelicula) - nuevaCantidad);
+
+                        mostrar("Compra editada con éxito.");
+                        mostrarCompras();
+                    }
+                });
+
+            }
+        });
+    }
+
+    private boolean existeCedula(String cedula) {
+        for (Compra c : compras) {
+            if (c.getCedula().equals(cedula)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void mostrar(String mensaje) {
+        JOptionPane.showMessageDialog(null, mensaje);
+    }
+
+    private void mostrarCompras() {
+        StringBuilder sb = new StringBuilder();
+        for (Compra c : compras) {
+            sb.append("Cédula: ").append(c.getCedula())
+                    .append(" | Película: ").append(c.getPelicula())
+                    .append(" | Cantidad: ").append(c.getCantidad()).append("\n");
+        }
+        ResultadoTXT.setText(sb.toString());
+    }
+
+    public static void main(String[] args) {
+        JFrame frame = new JFrame("Ventana");
+        frame.setContentPane(new Ventana().Principal);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.pack();
+        frame.setVisible(true);
+    }
+}
